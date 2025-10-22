@@ -88,7 +88,7 @@ void doZero()
 {
     Serial.println(F("[ZERO] Mulai... pastikan dua port setara tekanan"));
     float sum = 0.0f;
-    const int N = 500; // increased for steadier zero
+    const int N = 1000; // increased for steadier zero
     for (int i = 0; i < N; ++i)
     {
         sum += ads.readDiffVoltFiltered();
@@ -178,6 +178,8 @@ void handleSerial()
     while (Serial.available())
     {
         char c = (char)Serial.read();
+        Serial.print("Received: ");
+        Serial.println(c);
         if (c == '\n' || c == '\r')
         {
             if (line.length())
