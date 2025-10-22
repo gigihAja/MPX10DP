@@ -1,27 +1,33 @@
 #ifndef CALCULATE_H
-#define CALCULATE_H 
+#define CALCULATE_H
 
-class Calculate {
-    private:
-        float inletDiameter; // m
-        float throatDiameter; // m
-        float rho; // kg/m³ (air density)
-        float airflow; // m³/s
-        float pressure1; // Pa
-        float pressure2; // Pa
-        void convert(float p1, float p2);
-        float findDelta(float p1, float p2);
-        const float pi = 3.1415926f;
+class Calculate
+{
+private:
+    // SI units
+    float inletDiameter_m;
+    float throatDiameter_m;
+    float rho_kg_m3;
+    float pressure1_Pa;
+    float pressure2_Pa;
 
-    public:
-        Calculate(float in, float out, float ad);
+    float findDelta(float p1, float p2);
 
-        float convertToPressure(long raw, long offset, float scale);  
-        
-        float getAirflow(long raw1, long raw2, long offset1, long offset2, float scale1, float scale2); 
+public:
+    Calculate(float in_m, float out_m, float rho);
 
-        void showPressures();
+    float convertToPressure(long raw, long offset, float scale_Pa_per_count);
 
+    // Forward (ΔP -> Q)
+    float airflow_mLs(float p_inlet_Pa, float p_throat_Pa);
+
+    // K (mL/s)/sqrt(Pa) for this geometry + Cd
+    float k_mLs() const;
+
+    // Inverse (Q -> ΔP), with same geometry + Cd
+    float pressure_from_Q_mLs(float Q_mL_s) const;
+
+    void showPressures();
 };
 
 #endif

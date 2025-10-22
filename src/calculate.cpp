@@ -1,43 +1,74 @@
 #include "calculate.h"
-#include <cmath> 
-#include<Arduino.h>
-Calculate::Calculate(float in, float out, float ad)
-    : inletDiameter(in), throatDiameter(out), rho(ad), pressure1(0), pressure2(0) {}
+#include <Arduino.h>
+#include <cmath>
 
-float Calculate::convertToPressure(long raw, long offset, float scale) {  
-    return (raw - offset) * scale;
+namespace
+{
+    constexpr float PI_F = 3.1415926535f;
+    constexpr float C_d = 0.98f; // discharge coefficient
 }
 
-float Calculate::findDelta(float p1, float p2) {
-    float delta = p1 - p2;
-    if (delta <= 0) {
-        return 0;
-    }
-    return delta;
+Calculate::Calculate(float in_m, float out_m, float rho)
+    : inletDiameter_m(in_m), throatDiameter_m(out_m), rho_kg_m3(rho),
+      pressure1_Pa(0), pressure2_Pa(0) {}
+
+float Calculate::convertToPressure(long raw, long offset, float scale_Pa_per_count)
+{
+    return (raw - offset) * scale_Pa_per_count;
 }
 
-void Calculate::showPressures(){
-     Serial.print(pressure1);Serial.println("pa");
-     Serial.print(pressure2);Serial.println("pa");
+float Calculate::findDelta(float p1, float p2)
+{
+    float d = p1 - p2;
+    return (d > 0.0f) ? d : 0.0f;
 }
 
-float Calculate::getAirflow(long raw1, long raw2, long offset1, long offset2, float scale1, float scale2) {
-    
-    pressure1 = convertToPressure(raw1, offset1, scale1);  
-    pressure2 = convertToPressure(raw2, offset2, scale2);  
+void Calculate::showPressures()
+{
+    Serial.print(pressure1_Pa);
+    Serial.println(F(" Pa (inlet)"));
+    Serial.print(pressure2_Pa);
+    Serial.println(F(" Pa (throat)"));
+}
 
-    float delta = findDelta(pressure1, pressure2);
+// ΔP -> Q (mL/s)
+float Calculate::airflow_mLs(float p_inlet_Pa, float p_throat_Pa)
+{
+    pressure1_Pa = p_inlet_Pa;
+    pressure2_Pa = p_throat_Pa;
 
-    float A2 = (M_PI * pow(throatDiameter, 2)) / 4.0f;  
-    float beta = throatDiameter / inletDiameter;
-    float term = 1.0f - pow(beta, 4);
-
-    if (term <= 0.0f) { 
+    const float dP = findDelta(pressure1_Pa, pressure2_Pa);
+    if (dP <= 0)
         return 0.0f;
-    }
 
-    float airflow = A2 * sqrt((2.0f * delta) / (rho * term)); 
-    return airflow*15000;
-    
+    const float A2 = (PI_F * throatDiameter_m * throatDiameter_m) * 0.25f; // m^2
+    const float beta = throatDiameter_m / inletDiameter_m;
+    const float one_minus_beta4 = 1.0f - std::pow(beta, 4);
+    if (A2 <= 0.0f || beta <= 0.0f || beta >= 1.0f || one_minus_beta4 <= 0.0f)
+        return 0.0f;
+
+    // Venturi (real): Q = Cd * A2 * sqrt((2*dP)/(rho*(1 - beta^4)))
+    const float Q_m3s = C_d * A2 * std::sqrt((2.0f * dP) / (rho_kg_m3 * one_minus_beta4));
+    return Q_m3s * 1e6f; // mL/s
 }
 
+float Calculate::k_mLs() const
+{
+    const float A2 = (PI_F * throatDiameter_m * throatDiameter_m) * 0.25f; // m^2
+    const float beta = throatDiameter_m / inletDiameter_m;
+    const float one_minus_beta4 = 1.0f - std::pow(beta, 4);
+    if (A2 <= 0.0f || beta <= 0.0f || beta >= 1.0f || one_minus_beta4 <= 0.0f)
+        return 0.0f;
+
+    const float K_m3s = C_d * A2 * std::sqrt(2.0f / (rho_kg_m3 * one_minus_beta4));
+    return K_m3s * 1e6f; // (mL/s)/sqrt(Pa)
+}
+
+float Calculate::pressure_from_Q_mLs(float Q_mL_s) const
+{
+    const float K = k_mLs(); // (mL/s)/sqrt(Pa)
+    if (K <= 0.0f)
+        return 0.0f;
+    const float ratio = Q_mL_s / K;
+    return ratio * ratio; // Pa
+}
