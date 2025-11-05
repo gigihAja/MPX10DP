@@ -11,7 +11,7 @@ static constexpr float AIR_DENSITY = 1.225f;        // kg/m^3
 // ===================== I2C / ADS =====================
 static constexpr int SDA_PIN = 21;
 static constexpr int SCL_PIN = 22;
-ADSReader ads(0x48, GAIN_SIXTEEN, SDA_PIN, SCL_PIN); // A0-A1 diff
+ADSReader ads(0x48, GAIN_TWO, SDA_PIN, SCL_PIN); // A0-A1 diff
 
 // ===================== Button (ZERO + RESET) =====================
 static constexpr int CAL_BUTTON_PIN = 18; // active-LOW

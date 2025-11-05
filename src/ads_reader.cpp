@@ -15,7 +15,7 @@ bool ADSReader::begin()
 #ifdef RATE_ADS1115_128SPS
     ads_.setDataRate(RATE_ADS1115_128SPS);
 #endif
-    vdiff_lpf_ = countsToVolt(ads_.readADC_Differential_0_1());
+    vdiff_lpf_ = countsToVolt(ads_.readADC_Differential_1_3());
     return true;
 }
 
@@ -34,7 +34,7 @@ bool ADSReader::beginAuto()
 #ifdef RATE_ADS1115_128SPS
             ads_.setDataRate(RATE_ADS1115_128SPS);
 #endif
-            vdiff_lpf_ = countsToVolt(ads_.readADC_Differential_0_1());
+            vdiff_lpf_ = countsToVolt(ads_.readADC_Differential_1_3());
             Serial.print(F("[ADS] Found at 0x"));
             Serial.println(addr_, HEX);
             return true;
@@ -97,7 +97,7 @@ float ADSReader::countsToVolt(int16_t c) const
 
 float ADSReader::readDiffVoltFiltered()
 {
-    int16_t raw = ads_.readADC_Differential_0_1();
+    int16_t raw = ads_.readADC_Differential_1_3();
     float v = countsToVolt(raw);
     vdiff_lpf_ = vdiff_lpf_ + alpha_ * (v - vdiff_lpf_);
     return vdiff_lpf_;
